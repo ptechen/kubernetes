@@ -256,7 +256,8 @@
     "10.4.7.252",
     "10.4.7.253",
     "10.4.7.254",
-    "www.kube.com"
+    "www.kube.com",
+    "www.interestbe.com"
   ],
   "key": {
     "algo": "rsa",
