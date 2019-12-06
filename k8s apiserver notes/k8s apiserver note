@@ -1,0 +1,978 @@
+# yum install epel-release
+
+# yum install wget net-tools telnet tree nmap sysstat lrzsz dos2unix bind-utils -y
+
+hdss7-11上
+~]# yum install bind -y
+
+~]# vi /etc/named.conf
+listen-on port 53 { 10.4.7.11; };
+allow-query     { any; };
+forwarders      { 10.4.7.254; };
+dnssec-enable no;
+dnssec-validation no;
+
+~]# named-checkconf
+
+/etc/named.rfc1912.zones
+
+
+zone "host.com" IN {
+        type  master;
+        file  "host.com.zone";
+        allow-update { 10.4.7.11; };
+};
+
+zone "od.com" IN {
+        type  master;
+        file  "od.com.zone";
+        allow-update { 10.4.7.11; };
+};
+
+/var/named/host.com.zone
+
+
+$ORIGIN host.com.
+$TTL 600	; 10 minutes
+@       IN SOA	dns.host.com. dnsadmin.host.com. (
+				2019111001 ; serial
+				10800      ; refresh (3 hours)
+				900        ; retry (15 minutes)
+				604800     ; expire (1 week)
+				86400      ; minimum (1 day)
+				)
+			NS   dns.host.com.
+$TTL 60	; 1 minute
+dns                A    10.4.7.11
+HDSS7-11           A    10.4.7.11
+HDSS7-12           A    10.4.7.12
+HDSS7-21           A    10.4.7.21
+HDSS7-22           A    10.4.7.22
+HDSS7-200          A    10.4.7.200
+
+
+/var/named/od.com.zone
+
+$ORIGIN od.com.
+$TTL 600	; 10 minutes
+@   		IN SOA	dns.od.com. dnsadmin.od.com. (
+				2019111001 ; serial
+				10800      ; refresh (3 hours)
+				900        ; retry (15 minutes)
+				604800     ; expire (1 week)
+				86400      ; minimum (1 day)
+				)
+				NS   dns.od.com.
+$TTL 60	; 1 minute
+dns                A    10.4.7.11
+
+search host.com
+
+HDSS7-200上:
+~]# wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -O /usr/bin/cfssl
+~]# wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -O /usr/bin/cfssl-json
+~]# wget https://pkg.cfssl.org/R1.2/cfssl-certinfo_linux-amd64 -O /usr/bin/cfssl-certinfo
+~]# chmod +x /usr/bin/cfssl*
+
+/opt/certs/ca-csr.json
+{
+    "CN": "OldboyEdu",
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ],
+    "ca": {
+        "expiry": "175200h"
+    }
+}
+
+certs]# cfssl gencert -initca ca-csr.json | cfssl-json -bare ca
+
+~]# curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+
+
+/etc/docker/daemon.json
+{
+  "graph": "/data/docker",
+  "storage-driver": "overlay2",
+  "insecure-registries": ["registry.access.redhat.com","quay.io","harbor.od.com"],
+  "registry-mirrors": ["https://q2gr04ke.mirror.aliyuncs.com"],
+  "bip": "172.7.21.1/24",
+  "exec-opts": ["native.cgroupdriver=systemd"],
+  "live-restore": true
+}
+
+https://github.com/goharbor/harbor
+
+src]# tar xf harbor-offline-installer-v1.8.3.tgz -C /opt/
+
+opt]# mv harbor/ harbor-v1.8.3
+opt]# ln -s /opt/harbor-v1.8.3/ /opt/harbor
+
+
+/opt/harbor/harbor.yml
+hostname: harbor.od.com
+http:
+  port: 180
+data_volume: /data/harbor
+location: /data/harbor/logs
+
+mkdir -p /data/harbor/logs
+
+yum install docker-compose -y
+
+sh /opt/harbor/install.sh
+
+docker-compose ps
+
+yum install nginx -y
+
+/etc/nginx/conf.d/harbor.od.com.conf
+server {
+    listen       80;
+    server_name  harbor.od.com;
+
+    client_max_body_size 1000m;
+
+    location / {
+        proxy_pass http://127.0.0.1:180;
+    }
+}
+
+HDSS7-11上:
+~]# vi /var/named/od.com.zone
+harbor             A    10.4.7.200
+注意serial前滚一个序号
+
+~]# systemctl restart named
+
+~]# dig -t A harbor.od.com +short
+10.4.7.200
+
+浏览器打开http://harbor.od.com
+
+
+docker pull nginx:1.7.9
+
+<==> docker pull docker.io/library/nginx:1.7.9
+
+docker tag 84581e99d807 harbor.od.com/public/nginx:v1.7.9
+
+docker login harbor.od.com
+
+docker push harbor.od.com/public/nginx:v1.7.9
+
+HDSS7-200上:
+
+/opt/certs/ca-config.json
+
+
+{
+    "signing": {
+        "default": {
+            "expiry": "175200h"
+        },
+        "profiles": {
+            "server": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth"
+                ]
+            },
+            "client": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "client auth"
+                ]
+            },
+            "peer": {
+                "expiry": "175200h",
+                "usages": [
+                    "signing",
+                    "key encipherment",
+                    "server auth",
+                    "client auth"
+                ]
+            }
+        }
+    }
+}
+
+vi etcd-peer-csr.json
+
+
+{
+    "CN": "k8s-etcd",
+    "hosts": [
+        "10.4.7.11",
+        "10.4.7.12",
+        "10.4.7.21",
+        "10.4.7.22"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ]
+}
+
+certs]# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=peer etcd-peer-csr.json |cfssl-json -bare etcd-peer
+
+无他,但手熟尔
+
+useradd -s /sbin/nologin -M etcd
+https://github.com/etcd-io/etcd/tags
+
+mkdir -p /opt/etcd/certs /data/etcd /data/logs/etcd-server
+chown -R etcd.etcd /opt/etcd /data/etcd /data/logs/etcd-server
+/opt/etcd/etcd-server-startup.sh
+
+#!/bin/sh
+./etcd --name etcd-server-7-12 \
+       --data-dir /data/etcd/etcd-server \
+       --listen-peer-urls https://10.4.7.12:2380 \
+       --listen-client-urls https://10.4.7.12:2379,http://127.0.0.1:2379 \
+       --quota-backend-bytes 8000000000 \
+       --initial-advertise-peer-urls https://10.4.7.12:2380 \
+       --advertise-client-urls https://10.4.7.12:2379,http://127.0.0.1:2379 \
+       --initial-cluster  etcd-server-7-12=https://10.4.7.12:2380,etcd-server-7-21=https://10.4.7.21:2380,etcd-server-7-22=https://10.4.7.22:2380 \
+       --ca-file ./certs/ca.pem \
+       --cert-file ./certs/etcd-peer.pem \
+       --key-file ./certs/etcd-peer-key.pem \
+       --client-cert-auth  \
+       --trusted-ca-file ./certs/ca.pem \
+       --peer-ca-file ./certs/ca.pem \
+       --peer-cert-file ./certs/etcd-peer.pem \
+       --peer-key-file ./certs/etcd-peer-key.pem \
+       --peer-client-cert-auth \
+       --peer-trusted-ca-file ./certs/ca.pem \
+       --log-output stdout
+
+yum install supervisor -y
+systemctl start supervisord
+systemctl enable supervisord
+
+/etc/supervisord.d/etcd-server.ini
+[program:etcd-server-7-12]
+command=/opt/etcd/etcd-server-startup.sh                        ; the program (relative uses PATH, can take args)
+numprocs=1                                                      ; number of processes copies to start (def 1)
+directory=/opt/etcd                                             ; directory to cwd to before exec (def no cwd)
+autostart=true                                                  ; start at supervisord start (default: true)
+autorestart=true                                                ; retstart at unexpected quit (default: true)
+startsecs=30                                                    ; number of secs prog must stay running (def. 1)
+startretries=3                                                  ; max # of serial start failures (default 3)
+exitcodes=0,2                                                   ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                                 ; signal used to kill process (default TERM)
+stopwaitsecs=10                                                 ; max num secs to wait b4 SIGKILL (default 10)
+user=etcd                                                       ; setuid to this UNIX account to run the program
+redirect_stderr=true                                            ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/etcd-server/etcd.stdout.log           ; stdout log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                                    ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                                        ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                                     ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                                     ; emit events on stdout writes (default false)
+
+supervisorctl update
+etcd-server-7-12: added process group
+
+[root@hdss7-12 etcd]# supervisorctl status
+etcd-server-7-12                 RUNNING   pid 22656, uptime 0:00:35
+[root@hdss7-12 etcd]# netstat -luntp|grep etcd
+tcp        0      0 10.4.7.12:2379          0.0.0.0:*               LISTEN      22657/./etcd
+tcp        0      0 127.0.0.1:2379          0.0.0.0:*               LISTEN      22657/./etcd
+tcp        0      0 10.4.7.12:2380          0.0.0.0:*               LISTEN      22657/./etcd
+
+三个etcd节点都起来后:
+
+./etcdctl cluster-health
+member 988139385f78284 is healthy: got healthy result from http://127.0.0.1:2379
+member 5a0ef2a004fc4349 is healthy: got healthy result from http://127.0.0.1:2379
+member f4a0cb0a765574a8 is healthy: got healthy result from http://127.0.0.1:2379
+cluster is healthy
+
+./etcdctl member list
+988139385f78284: name=etcd-server-7-22 peerURLs=https://10.4.7.22:2380 clientURLs=http://127.0.0.1:2379,https://10.4.7.22:2379 isLeader=false
+5a0ef2a004fc4349: name=etcd-server-7-21 peerURLs=https://10.4.7.21:2380 clientURLs=http://127.0.0.1:2379,https://10.4.7.21:2379 isLeader=false
+f4a0cb0a765574a8: name=etcd-server-7-12 peerURLs=https://10.4.7.12:2380 clientURLs=http://127.0.0.1:2379,https://10.4.7.12:2379 isLeader=true
+
+# vi client-csr.json
+
+{
+    "CN": "k8s-node",
+    "hosts": [
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ]
+}
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=client client-csr.json |cfssl-json -bare client
+
+# vi apiserver-csr.json
+
+{
+    "CN": "k8s-apiserver",
+    "hosts": [
+        "127.0.0.1",
+        "192.168.0.1",
+        "kubernetes.default",
+        "kubernetes.default.svc",
+        "kubernetes.default.svc.cluster",
+        "kubernetes.default.svc.cluster.local",
+        "10.4.7.10",
+        "10.4.7.21",
+        "10.4.7.22",
+        "10.4.7.23"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ]
+}
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=server apiserver-csr.json |cfssl-json -bare apiserver
+
+# mkdir cert
+scp 证书3套
+# ll
+total 24
+-rw------- 1 root root 1679 Nov 10 17:42 apiserver-key.pem
+-rw-r--r-- 1 root root 1598 Nov 10 17:42 apiserver.pem
+-rw------- 1 root root 1679 Nov 10 17:41 ca-key.pem
+-rw-r--r-- 1 root root 1346 Nov 10 17:41 ca.pem
+-rw------- 1 root root 1675 Nov 10 17:41 client-key.pem
+-rw-r--r-- 1 root root 1363 Nov 10 17:41 client.pem
+# mkdir conf
+
+conf]# vi audit.yaml
+apiVersion: audit.k8s.io/v1beta1 # This is required.
+kind: Policy
+# Don't generate audit events for all requests in RequestReceived stage.
+omitStages:
+  - "RequestReceived"
+rules:
+  # Log pod changes at RequestResponse level
+  - level: RequestResponse
+    resources:
+    - group: ""
+      # Resource "pods" doesn't match requests to any subresource of pods,
+      # which is consistent with the RBAC policy.
+      resources: ["pods"]
+  # Log "pods/log", "pods/status" at Metadata level
+  - level: Metadata
+    resources:
+    - group: ""
+      resources: ["pods/log", "pods/status"]
+
+  # Don't log requests to a configmap called "controller-leader"
+  - level: None
+    resources:
+    - group: ""
+      resources: ["configmaps"]
+      resourceNames: ["controller-leader"]
+
+  # Don't log watch requests by the "system:kube-proxy" on endpoints or services
+  - level: None
+    users: ["system:kube-proxy"]
+    verbs: ["watch"]
+    resources:
+    - group: "" # core API group
+      resources: ["endpoints", "services"]
+
+  # Don't log authenticated requests to certain non-resource URL paths.
+  - level: None
+    userGroups: ["system:authenticated"]
+    nonResourceURLs:
+    - "/api*" # Wildcard matching.
+    - "/version"
+
+  # Log the request body of configmap changes in kube-system.
+  - level: Request
+    resources:
+    - group: "" # core API group
+      resources: ["configmaps"]
+    # This rule only applies to resources in the "kube-system" namespace.
+    # The empty string "" can be used to select non-namespaced resources.
+    namespaces: ["kube-system"]
+
+  # Log configmap and secret changes in all other namespaces at the Metadata level.
+  - level: Metadata
+    resources:
+    - group: "" # core API group
+      resources: ["secrets", "configmaps"]
+
+  # Log all other resources in core and extensions at the Request level.
+  - level: Request
+    resources:
+    - group: "" # core API group
+    - group: "extensions" # Version of group should NOT be included.
+
+  # A catch-all rule to log all other requests at the Metadata level.
+  - level: Metadata
+    # Long-running requests like watches that fall under this rule will not
+    # generate an audit event in RequestReceived.
+    omitStages:
+      - "RequestReceived"
+
+/opt/kubernetes/server/bin/kube-apiserver.sh
+#!/bin/bash
+./kube-apiserver \
+  --apiserver-count 2 \
+  --audit-log-path /data/logs/kubernetes/kube-apiserver/audit-log \
+  --audit-policy-file ./conf/audit.yaml \
+  --authorization-mode RBAC \
+  --client-ca-file ./cert/ca.pem \
+  --requestheader-client-ca-file ./cert/ca.pem \
+  --enable-admission-plugins NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,DefaultTolerationSeconds,MutatingAdmissionWebhook,ValidatingAdmissionWebhook,ResourceQuota \
+  --etcd-cafile ./cert/ca.pem \
+  --etcd-certfile ./cert/client.pem \
+  --etcd-keyfile ./cert/client-key.pem \
+  --etcd-servers https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379 \
+  --service-account-key-file ./cert/ca-key.pem \
+  --service-cluster-ip-range 192.168.0.0/16 \
+  --service-node-port-range 3000-29999 \
+  --target-ram-mb=1024 \
+  --kubelet-client-certificate ./cert/client.pem \
+  --kubelet-client-key ./cert/client-key.pem \
+  --log-dir  /data/logs/kubernetes/kube-apiserver \
+  --tls-cert-file ./cert/apiserver.pem \
+  --tls-private-key-file ./cert/apiserver-key.pem \
+  --v 2
+
+# chmod +x kube-apiserver.sh
+
+# vi /etc/supervisord.d/kube-apiserver.ini
+
+[program:kube-apiserver-7-21]
+command=/opt/kubernetes/server/bin/kube-apiserver.sh            ; the program (relative uses PATH, can take args)
+numprocs=1                                                      ; number of processes copies to start (def 1)
+directory=/opt/kubernetes/server/bin                            ; directory to cwd to before exec (def no cwd)
+autostart=true                                                  ; start at supervisord start (default: true)
+autorestart=true                                                ; retstart at unexpected quit (default: true)
+startsecs=30                                                    ; number of secs prog must stay running (def. 1)
+startretries=3                                                  ; max # of serial start failures (default 3)
+exitcodes=0,2                                                   ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                                 ; signal used to kill process (default TERM)
+stopwaitsecs=10                                                 ; max num secs to wait b4 SIGKILL (default 10)
+user=root                                                       ; setuid to this UNIX account to run the program
+redirect_stderr=true                                            ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/kubernetes/kube-apiserver/apiserver.stdout.log        ; stderr log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                                    ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                                        ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                                     ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                                     ; emit events on stdout writes (default false)
+
+# mkdir -p /data/logs/kubernetes/kube-apiserver
+# supervisorctl update
+
+HDSS7-11和HDSS7-12上:
+# yum install nginx -y
+
+/etc/nginx/nginx.conf
+
+stream {
+    upstream kube-apiserver {
+        server 10.4.7.21:6443     max_fails=3 fail_timeout=30s;
+        server 10.4.7.22:6443     max_fails=3 fail_timeout=30s;
+    }
+    server {
+        listen 7443;
+        proxy_connect_timeout 2s;
+        proxy_timeout 900s;
+        proxy_pass kube-apiserver;
+    }
+}
+
+# yum install keepalived -y
+
+/etc/keepalived/check_port.sh
+#!/bin/bash
+#keepalived 监控端口脚本
+#使用方法：
+#在keepalived的配置文件中
+#vrrp_script check_port {#创建一个vrrp_script脚本,检查配置
+#    script "/etc/keepalived/check_port.sh 6379" #配置监听的端口
+#    interval 2 #检查脚本的频率,单位（秒）
+#}
+CHK_PORT=$1
+if [ -n "$CHK_PORT" ];then
+        PORT_PROCESS=`ss -lnt|grep $CHK_PORT|wc -l`
+        if [ $PORT_PROCESS -eq 0 ];then
+                echo "Port $CHK_PORT Is Not Used,End."
+                exit 1
+        fi
+else
+        echo "Check Port Cant Be Empty!"
+fi
+
+# chmod +x /etc/keepalived/check_port.sh
+
+keepalived 主:
+
+! Configuration File for keepalived
+
+global_defs {
+   router_id 10.4.7.11
+
+}
+
+vrrp_script chk_nginx {
+    script "/etc/keepalived/check_port.sh 7443"
+    interval 2
+    weight -20
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 251
+    priority 100
+    advert_int 1
+    mcast_src_ip 10.4.7.11
+    nopreempt
+
+    authentication {
+        auth_type PASS
+        auth_pass 11111111
+    }
+    track_script {
+         chk_nginx
+    }
+    virtual_ipaddress {
+        10.4.7.10
+    }
+}
+
+keepalived从:
+
+! Configuration File for keepalived
+global_defs {
+	router_id 10.4.7.12
+}
+vrrp_script chk_nginx {
+	script "/etc/keepalived/check_port.sh 7443"
+	interval 2
+	weight -20
+}
+vrrp_instance VI_1 {
+	state BACKUP
+	interface eth0
+	virtual_router_id 251
+	mcast_src_ip 10.4.7.12
+	priority 90
+	advert_int 1
+	authentication {
+		auth_type PASS
+		auth_pass 11111111
+	}
+	track_script {
+		chk_nginx
+	}
+	virtual_ipaddress {
+		10.4.7.10
+	}
+}
+
+/opt/kubernetes/server/bin/kube-controller-manager.sh
+
+#!/bin/sh
+./kube-controller-manager \
+  --cluster-cidr 172.7.0.0/16 \
+  --leader-elect true \
+  --log-dir /data/logs/kubernetes/kube-controller-manager \
+  --master http://127.0.0.1:8080 \
+  --service-account-private-key-file ./cert/ca-key.pem \
+  --service-cluster-ip-range 192.168.0.0/16 \
+  --root-ca-file ./cert/ca.pem \
+  --v 2
+
+  chmod +x /opt/kubernetes/server/bin/kube-controller-manager.sh
+  mkdir -p /data/logs/kubernetes/kube-controller-manager
+
+  /etc/supervisord.d/kube-conntroller-manager.ini
+
+[program:kube-controller-manager-7-21]
+command=/opt/kubernetes/server/bin/kube-controller-manager.sh                     ; the program (relative uses PATH, can take args)
+numprocs=1                                                                        ; number of processes copies to start (def 1)
+directory=/opt/kubernetes/server/bin                                              ; directory to cwd to before exec (def no cwd)
+autostart=true                                                                    ; start at supervisord start (default: true)
+autorestart=true                                                                  ; retstart at unexpected quit (default: true)
+startsecs=30                                                                      ; number of secs prog must stay running (def. 1)
+startretries=3                                                                    ; max # of serial start failures (default 3)
+exitcodes=0,2                                                                     ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                                                   ; signal used to kill process (default TERM)
+stopwaitsecs=10                                                                   ; max num secs to wait b4 SIGKILL (default 10)
+user=root                                                                         ; setuid to this UNIX account to run the program
+redirect_stderr=true                                                              ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/kubernetes/kube-controller-manager/controller.stdout.log  ; stderr log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                                                      ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                                                          ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                                                       ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                                                       ; emit events on stdout writes (default false)
+
+supervisorctl update
+
+
+/opt/kubernetes/server/bin/kube-scheduler.sh
+#!/bin/sh
+./kube-scheduler \
+  --leader-elect  \
+  --log-dir /data/logs/kubernetes/kube-scheduler \
+  --master http://127.0.0.1:8080 \
+  --v 2
+
+chmod +x /opt/kubernetes/server/bin/kube-scheduler.sh
+mkdir -p /data/logs/kubernetes/kube-scheduler
+
+/etc/supervisord.d/kube-scheduler.ini
+
+[program:kube-scheduler-7-21]
+command=/opt/kubernetes/server/bin/kube-scheduler.sh                     ; the program (relative uses PATH, can take args)
+numprocs=1                                                               ; number of processes copies to start (def 1)
+directory=/opt/kubernetes/server/bin                                     ; directory to cwd to before exec (def no cwd)
+autostart=true                                                           ; start at supervisord start (default: true)
+autorestart=true                                                         ; retstart at unexpected quit (default: true)
+startsecs=30                                                             ; number of secs prog must stay running (def. 1)
+startretries=3                                                           ; max # of serial start failures (default 3)
+exitcodes=0,2                                                            ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                                          ; signal used to kill process (default TERM)
+stopwaitsecs=10                                                          ; max num secs to wait b4 SIGKILL (default 10)
+user=root                                                                ; setuid to this UNIX account to run the program
+redirect_stderr=true                                                     ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/kubernetes/kube-scheduler/scheduler.stdout.log ; stderr log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                                             ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                                                 ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                                              ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                                              ; emit events on stdout writes (default false)
+
+
+# ln -s /opt/kubernetes/server/bin/kubectl /usr/bin/kubectl
+
+# kubectl get cs
+NAME                 STATUS    MESSAGE              ERROR
+controller-manager   Healthy   ok
+scheduler            Healthy   ok
+etcd-1               Healthy   {"health": "true"}
+etcd-0               Healthy   {"health": "true"}
+etcd-2               Healthy   {"health": "true"}
+
+# vi kubelet-csr.json
+
+{
+    "CN": "k8s-kubelet",
+    "hosts": [
+    "127.0.0.1",
+    "10.4.7.125",
+    "10.4.7.126",
+    "10.4.7.127",
+    "10.4.7.128",
+    "10.4.7.129",
+    "10.4.7.130",
+    "10.4.7.131",
+    "10.4.7.132",
+    "10.4.7.133"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ]
+}
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=server kubelet-csr.json | cfssl-json -bare kubelet
+
+分发证书到7-21和7-22
+conf]# kubectl config set-cluster myk8s \
+  --certificate-authority=/opt/kubernetes/server/bin/certs/ca.pem \
+  --embed-certs=true \
+  --server=https://10.4.7.125:7443 \
+  --kubeconfig=kubelet.kubeconfig
+
+conf]# kubectl config set-credentials k8s-node \
+  --client-certificate=/opt/kubernetes/server/bin/certs/client.pem \
+  --client-key=/opt/kubernetes/server/bin/certs/client-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kubelet.kubeconfig
+
+conf]# kubectl config set-context myk8s-context \
+  --cluster=myk8s \
+  --user=k8s-node \
+  --kubeconfig=kubelet.kubeconfig
+
+conf]# kubectl config use-context myk8s-context --kubeconfig=kubelet.kubeconfig
+
+conf}# k8s-node.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-node
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: k8s-node
+
+conf]# kubectl create -f k8s-node.yaml
+
+conf]# kubectl get clusterrolebinding k8s-node -o yaml
+
+HDSS7-22上:
+conf]# scp hdss7-21:/opt/kubernetes/server/bin/conf/kubelet.kubeconfig .
+
+HDSS7-200上:
+# docker pull kubernetes/pause
+# docker tag f9d5de079539 harbor.od.com/public/pause:latest
+# docker push harbor.od.com/public/pause:latedockerst
+
+/opt/kubernetes/server/bin/kubelet.sh
+
+#!/bin/sh
+./kubelet \
+  --anonymous-auth=false \
+  --cgroup-driver systemd \
+  --cluster-dns 192.168.0.2 \
+  --cluster-domain cluster.local \
+  --runtime-cgroups=/systemd/system.slice \
+  --kubelet-cgroups=/systemd/system.slice \
+  --fail-swap-on="false" \
+  --client-ca-file ./cert/ca.pem \
+  --tls-cert-file ./cert/kubelet.pem \
+  --tls-private-key-file ./cert/kubelet-key.pem \
+  --hostname-override hdss7-21.host.com \
+  --image-gc-high-threshold 20 \
+  --image-gc-low-threshold 10 \
+  --kubeconfig ./conf/kubelet.kubeconfig \
+  --log-dir /data/logs/kubernetes/kube-kubelet \
+  --pod-infra-container-image harbor.od.com/public/pause:latest \
+  --root-dir /data/kubelet
+
+# mkdir -p /data/logs/kubernetes/kube-kubelet /data/kubelet
+# chmod +x kubelet.sh
+
+/etc/supervisord.d/kube-kubelet.ini
+[program:kube-kubelet-7-21]
+command=/opt/kubernetes/server/bin/kubelet.sh     ; the program (relative uses PATH, can take args)
+numprocs=1                                        ; number of processes copies to start (def 1)
+directory=/opt/kubernetes/server/bin              ; directory to cwd to before exec (def no cwd)
+autostart=true                                    ; start at supervisord start (default: true)
+autorestart=true              		          ; retstart at unexpected quit (default: true)
+startsecs=30                                      ; number of secs prog must stay running (def. 1)
+startretries=3                                    ; max # of serial start failures (default 3)
+exitcodes=0,2                                     ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                   ; signal used to kill process (default TERM)
+stopwaitsecs=10                                   ; max num secs to wait b4 SIGKILL (default 10)
+user=root                                         ; setuid to this UNIX account to run the program
+redirect_stderr=true                              ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/kubernetes/kube-kubelet/kubelet.stdout.log   ; stderr log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                      ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                          ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                       ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                       ; emit events on stdout writes (default false)
+
+# supervisorctl update
+
+# kubectl get nodes
+NAME                STATUS   ROLES    AGE   VERSION
+hdss7-21.host.com   Ready    <none>   53s   v1.15.2
+hdss7-22.host.com   Ready    <none>   59s   v1.15.2
+
+# kubectl label node hdss7-21.host.com node-role.kubernetes.io/node=
+kubectl get nodes
+NAME                STATUS   ROLES         AGE     VERSION
+hdss7-21.host.com   Ready    master,node   2m35s   v1.15.2
+hdss7-22.host.com   Ready    master,node   2m41s   v1.15.2
+
+# vi kube-proxy-csr.json
+
+
+{
+    "CN": "system:kube-proxy",
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "CN",
+            "ST": "beijing",
+            "L": "beijing",
+            "O": "od",
+            "OU": "ops"
+        }
+    ]
+}
+
+# cfssl gencert -ca=ca.pem -ca-key=ca-key.pem -config=ca-config.json -profile=client kube-proxy-csr.json |cfssl-json -bare kube-proxy-client
+
+分发证书,略
+
+conf]# kubectl config set-cluster myk8s \
+  --certificate-authority=/opt/kubernetes/server/bin/certs/ca.pem \
+  --embed-certs=true \
+  --server=https://10.4.7.125:7443 \
+  --kubeconfig=kube-proxy.kubeconfig
+
+conf]# kubectl config set-credentials kube-proxy \
+  --client-certificate=/opt/kubernetes/server/bin/certs/kube-proxy-client.pem \
+  --client-key=/opt/kubernetes/server/bin/certs/kube-proxy-client-key.pem \
+  --embed-certs=true \
+  --kubeconfig=kube-proxy.kubeconfig
+
+conf]# kubectl config set-context myk8s-context \
+  --cluster=myk8s \
+  --user=kube-proxy \
+  --kubeconfig=kube-proxy.kubeconfig
+
+conf]# kubectl config use-context myk8s-context --kubeconfig=kube-proxy.kubeconfig
+
+
+#!/bin/bash
+ipvs_mods_dir="/usr/lib/modules/$(uname -r)/kernel/net/netfilter/ipvs"
+for i in $(ls $ipvs_mods_dir|grep -o "^[^.]*")
+do
+  /sbin/modinfo -F filename $i &>/dev/null
+  if [ $? -eq 0 ];then
+    /sbin/modprobe $i
+  fi
+done
+
+/opt/kubernetes/server/bin/kube-proxy.sh
+
+#!/bin/sh
+./kube-proxy \
+  --cluster-cidr 172.7.0.0/16 \
+  --hostname-override hdss7-21.host.com \
+  --proxy-mode=ipvs \
+  --ipvs-scheduler=nq \
+  --kubeconfig ./conf/kube-proxy.kubeconfig
+
+# chmod +x kube-proxy.sh
+# mkdir -p /data/logs/kubernetes/kube-proxy
+
+/etc/supervisord.d/kube-proxy.ini
+[program:kube-proxy-7-21]
+command=/opt/kubernetes/server/bin/kube-proxy.sh                     ; the program (relative uses PATH, can take args)
+numprocs=1                                                           ; number of processes copies to start (def 1)
+directory=/opt/kubernetes/server/bin                                 ; directory to cwd to before exec (def no cwd)
+autostart=true                                                       ; start at supervisord start (default: true)
+autorestart=true                                                     ; retstart at unexpected quit (default: true)
+startsecs=30                                                         ; number of secs prog must stay running (def. 1)
+startretries=3                                                       ; max # of serial start failures (default 3)
+exitcodes=0,2                                                        ; 'expected' exit codes for process (default 0,2)
+stopsignal=QUIT                                                      ; signal used to kill process (default TERM)
+stopwaitsecs=10                                                      ; max num secs to wait b4 SIGKILL (default 10)
+user=root                                                            ; setuid to this UNIX account to run the program
+redirect_stderr=true                                                 ; redirect proc stderr to stdout (default false)
+stdout_logfile=/data/logs/kubernetes/kube-proxy/proxy.stdout.log     ; stderr log path, NONE for none; default AUTO
+stdout_logfile_maxbytes=64MB                                         ; max # logfile bytes b4 rotation (default 50MB)
+stdout_logfile_backups=4                                             ; # of stdout logfile backups (default 10)
+stdout_capture_maxbytes=1MB                                          ; number of bytes in 'capturemode' (default 0)
+stdout_events_enabled=false                                          ; emit events on stdout writes (default false)
+
+# supervisorctl update
+
+# ipvsadm -Ln
+IP Virtual Server version 1.2.1 (size=4096)
+Prot LocalAddress:Port Scheduler Flags
+  -> RemoteAddress:Port           Forward Weight ActiveConn InActConn
+TCP  192.168.0.1:443 nq
+  -> 10.4.7.21:6443               Masq    1      0          0
+  -> 10.4.7.22:6443               Masq    1      0          0
+
+/root/nginx-ds.yaml
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: nginx-ds
+spec:
+  template:
+    metadata:
+      labels:
+        app: nginx-ds
+    spec:
+      containers:
+      - name: my-nginx
+        image: harbor.od.com/public/nginx:v1.7.9
+        ports:
+        - containerPort: 80
+
+# kubectl create -f nginx-ds.yaml
+daemonset.extensions/nginx-ds created
+
+# kubectl get pods
+NAME             READY   STATUS              RESTARTS   AGE
+nginx-ds-qz7nk   0/1     ContainerCreating   0          12s
+nginx-ds-rvplm   0/1     ContainerCreating   0          12s
+
+[root@hdss7-22 bin]# kubectl get cs
+NAME                 STATUS    MESSAGE              ERROR
+scheduler            Healthy   ok
+etcd-1               Healthy   {"health": "true"}
+etcd-2               Healthy   {"health": "true"}
+etcd-0               Healthy   {"health": "true"}
+controller-manager   Healthy   ok
+[root@hdss7-22 bin]# kubectl get node
+NAME                STATUS   ROLES         AGE   VERSION
+hdss7-21.host.com   Ready    master,node   35m   v1.15.2
+hdss7-22.host.com   Ready    master,node   35m   v1.15.2
+[root@hdss7-22 bin]# kubectl get pods
+NAME             READY   STATUS    RESTARTS   AGE
+nginx-ds-qz7nk   1/1     Running   0          113s
+nginx-ds-rvplm   1/1     Running   0          113s
+
+
+kubectl get nodes -o wide
