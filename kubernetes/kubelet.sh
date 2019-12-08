@@ -71,7 +71,15 @@ mkdir -p /data/logs/kubernetes/kube-kubelet
 
 mkdir -p /data/kubelet
 
-echo '[program:kube-kubelet-'${hostname}']
+localIP=$(ip addr|grep eth0|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "add:")
+
+localip=${localIP%/*}
+
+backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
+
+back-ip=${backip//./-}
+
+echo '[program:kube-kubelet-'${back-ip}']
 command=/opt/kubernetes/server/bin/kubelet.sh     ; the program (relative uses PATH, can take args)
 numprocs=1                                        ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin              ; directory to cwd to before exec (def no cwd)

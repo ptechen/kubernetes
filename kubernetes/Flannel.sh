@@ -23,7 +23,7 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-#back-ip=${backip//./-}
+back-ip=${backip//./-}
 
 echo 'FLANNEL_NETWORK=172.7.0.0/16
 FLANNEL_SUBNET=172.'$backip'.1/24
@@ -49,7 +49,7 @@ etcdctl set /coreos.com/network/config '{"Network": "172.7.0.0/16", "Backend": {
 
 
 
-echo '[program:flanneld-'${hostname}']
+echo '[program:flanneld-'${back-ip}']
 command=/opt/flannel/flanneld.sh                             ; the program (relative uses PATH, can take args)
 numprocs=1                                                   ; number of processes copies to start (def 1)
 directory=/opt/flannel                                       ; directory to cwd to before exec (def no cwd)

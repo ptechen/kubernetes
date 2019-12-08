@@ -2,7 +2,9 @@
 
 hostname=$HOSTNAME
 
-ln -s $PWD/etcd-v* /opt/etcd
+tar xf etcd-v3.1.20-linux-amd64.tar.gz -C /opt
+
+ln -s /opt/etcd-v3.1.20-linux-amd64 /opt/etcd
 
 useradd -s /sbin/nologin -M etcd
 
@@ -14,8 +16,11 @@ localIP=$(ip addr|grep eth0|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{prin
 
 localip=${localIP%/*}
 
+backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
+
+back-ip=${backip//./-}
 echo '#!/bin/sh
-./etcd --name etcd-server-'${hostname}' \
+./etcd --name etcd-server-'${back-ip}' \
        --data-dir /data/etcd/etcd-server \
        --listen-peer-urls https://'${localip}':2380 \
        --listen-client-urls https://'${localip}':2379,http://127.0.0.1:2379 \
@@ -46,7 +51,7 @@ systemctl start supervisord
 
 systemctl enable supervisord
 
-echo '[program:etcd-server-'${hostname}']
+echo '[program:etcd-server-'${back-ip}']
 command=/opt/etcd/etcd-server-startup.sh                        ; the program (relative uses PATH, can take args)
 numprocs=1                                                      ; number of processes copies to start (def 1)
 directory=/opt/etcd                                             ; directory to cwd to before exec (def no cwd)
@@ -72,6 +77,13 @@ chown -R etcd.etcd /data/logs/etcd-server
 
 ln -s /opt/etcd/etcdctl /usr/bin/etcdctl
 
+yum install supervisor -y
+
+systemctl start supervisord
+
+systemctl enable supervisord
+
+supervisorctl update
 # etcdctl cluster-health
 
 # etcdctl member list

@@ -47,8 +47,15 @@ hostname=$HOSTNAME
 
 chmod +x /opt/kubernetes/server/bin/kube-proxy.sh
 
+localIP=$(ip addr|grep eth0|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "add:")
 
-echo '[program:kube-proxy-'${hostname}']
+localip=${localIP%/*}
+
+backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
+
+back-ip=${backip//./-}
+
+echo '[program:kube-proxy-'${back-ip}']
 command=/opt/kubernetes/server/bin/kube-proxy.sh                     ; the program (relative uses PATH, can take args)
 numprocs=1                                                           ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin                                 ; directory to cwd to before exec (def no cwd)
