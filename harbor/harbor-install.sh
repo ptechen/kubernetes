@@ -14,7 +14,7 @@ mkdir -p /data/harbor/logs
 
 yum install docker-compose -y
 
-sh /opt/harbor/install.sh
+#sh /opt/harbor/install.sh
 
 yum install -y nginx
 
