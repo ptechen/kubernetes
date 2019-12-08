@@ -12,6 +12,10 @@ ln -s $PWD/harbor /opt/harbor
 
 mkdir -p /data/harbor/logs
 
+yum install -y python3
+
+pip3 install docker-compose
+
 yum install docker-compose -y
 
 #sh /opt/harbor/install.sh
