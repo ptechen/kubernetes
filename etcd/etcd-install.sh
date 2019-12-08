@@ -10,10 +10,9 @@ mkdir -p /opt/etcd/certs
 
 cp ../certs/pem/etcd-peer*.pem /opt/etcd/certs
 
-ip addr|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:" > localIp.txt
-sed -i '1s/\/24//g' /root/localIp.txt
-sed -i '2d' localIp.txt
-localip=$(cat /root/localIp.txt)
+localIP=$(ip addr|grep eth0|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "add:")
+
+localip=${localIP%/*}
 
 echo '#!/bin/sh
 ./etcd --name etcd-server-'${hostname}' \
