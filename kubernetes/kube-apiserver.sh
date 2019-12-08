@@ -1,5 +1,4 @@
 #!/bin/bash
-hostname=$HOSTNAME
 
 yum install supervisor -y
 systemctl start supervisord
