@@ -6,8 +6,9 @@
 #   port: 180
 # data_volume: /data/harbor
 # location: /data/harbor/logs
+tar xf harbor-offline-installer-v1.8.5.tgz
 
-ln -s $PWD/harbor-v* /opt/harbor
+ln -s $PWD/harbor /opt/harbor
 
 mkdir -p /data/harbor/logs
 
