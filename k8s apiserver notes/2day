@@ -80,7 +80,8 @@ cert]# scp hdss7-200:/opt/certs/client.pem .
 
 cert]# scp hdss7-200:/opt/certs/client-key.pem .
 
-flannel]# vi subnet.env
+flannel
+]# vi subnet.env
 
 FLANNEL_NETWORK=172.7.0.0/16
 FLANNEL_SUBNET=172.7.21.1/24

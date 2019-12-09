@@ -4,7 +4,9 @@ yum install supervisor -y
 systemctl start supervisord
 systemctl enable supervisord
 
-ln -s $PWD/kubernetes-v* /opt/kubernetes
+tar xf kubernetes-server-linux-amd64-v1.15.2.tar.gz -C /opt
+mv /opt/kubernetes /opt/kubernetes-v1.15.2
+ln -s /opt/kubernetes-v1.15.2 /opt/kubernetes
 
 mkdir -p /opt/kubernetes/server/bin/certs
 
@@ -121,9 +123,9 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-back-ip=${backip//./-}
+back_ip=${backip//./-}
 
-echo '[program:kube-apiserver-'${back-ip}']
+echo '[program:kube-apiserver-'${back_ip}']
 command=/opt/kubernetes/server/bin/kube-apiserver.sh            ; the program (relative uses PATH, can take args)
 numprocs=1                                                      ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin                            ; directory to cwd to before exec (def no cwd)

@@ -1,7 +1,6 @@
 #!/bin/bash
-hostname=$HOSTNAME
 
-ln -s /opt/kubernetes/server/bin/kubelet /usr/bin/kubelet
+ln -s /opt/kubernetes/server/bin/kubectl /usr/bin/kubectl
 
 echo '#!/bin/sh
 ./kube-scheduler \
@@ -21,9 +20,9 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-back-ip=${backip//./-}
+back_ip=${backip//./-}
 
-echo '[program:kube-scheduler-'${back-ip}']
+echo '[program:kube-scheduler-'${back_ip}']
 command=/opt/kubernetes/server/bin/kube-scheduler.sh                     ; the program (relative uses PATH, can take args)
 numprocs=1                                                               ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin                                     ; directory to cwd to before exec (def no cwd)
@@ -46,4 +45,3 @@ stdout_events_enabled=false                                              ; emit 
 supervisorctl update
 sleep 3
 
-kubectl get cs

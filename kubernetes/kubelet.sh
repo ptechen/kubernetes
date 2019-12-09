@@ -1,6 +1,9 @@
 #!/bin/bash
-hostname=$HOSTNAME
 
+
+#docker pull kubernetes/pause
+#docker tag f9d5de079539 harbor.od.com/public/pause:latest
+#docker push harbor.od.com/public/pause:latest
 # kubelet
 
 cd /opt/kubernetes/server/bin/conf
@@ -77,9 +80,9 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-back-ip=${backip//./-}
+back_ip=${backip//./-}
 
-echo '[program:kube-kubelet-'${back-ip}']
+echo '[program:kube-kubelet-'${back_ip}']
 command=/opt/kubernetes/server/bin/kubelet.sh     ; the program (relative uses PATH, can take args)
 numprocs=1                                        ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin              ; directory to cwd to before exec (def no cwd)

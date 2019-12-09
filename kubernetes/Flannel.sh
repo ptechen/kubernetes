@@ -1,21 +1,21 @@
 #!/bin/bash
-hostname=$HOSTNAME
 yum install -y iptables-services
 
 systemctl start iptables
+
 systemctl enable iptables
 
-mkdir -p /opt/flanneld-v1.11.0
+mkdir -p /opt/flannel-v1.11.0
 
-tar xf flanneld-flannel-v0.11.0-linux-amd64.tar.gz -C /opt/flanneld-v1.11.0
+tar xf flannel-v0.11.0-linux-amd64.tar.gz -C /opt/flannel-v1.11.0/
 
-ln -s /opt/flanneld-v1.11.0 /opt/flanneld
+ln -s /opt/flannel-v1.11.0 /opt/flannel
 
-mkdir -p /opt/flanneld/certs
+mkdir -p /opt/flannel/certs
 
-cp /opt/kubernetes/server/bin/certs/ca.pem /opt/flanneld/certs/ca.pem
-cp /opt/kubernetes/server/bin/certs/client.pem /opt/flanneld/certs/client.pem
-cp /opt/kubernetes/server/bin/certs/client-key.pem /opt/flanneld/certs/client=key.pem
+cp /opt/kubernetes/server/bin/certs/ca.pem /opt/flannel/certs/ca.pem
+cp /opt/kubernetes/server/bin/certs/client.pem /opt/flannel/certs/client.pem
+cp /opt/kubernetes/server/bin/certs/client-key.pem /opt/flannel/certs/client-key.pem
 
 localIP=$(ip addr|grep eth0|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "add:")
 
@@ -23,33 +23,34 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-back-ip=${backip//./-}
+back_ip=${backip//./-}
 
 echo 'FLANNEL_NETWORK=172.7.0.0/16
 FLANNEL_SUBNET=172.'$backip'.1/24
 FLANNEL_MTU=1500
 FLANNEL_IPMASQ=false
-' > /opt/flanneld/subnet.env
-
+' > /opt/flannel/subnet.env
+#FLANNEL_ETCD_ENDPOINTS="https://'$localip':2379"
+#FLANNEL_ETCD_PREFIX="/coreos.com/network"
 echo '#!/bin/sh
 ./flanneld \
   --public-ip='${localip}' \
-  --etcd-endpoints=https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379 \
+  --etcd-endpoints=https://10.4.7.126:2379,https://10.4.7.127:2379,https://10.4.7.128:2379 \
   --etcd-keyfile=./certs/client-key.pem \
   --etcd-certfile=./certs/client.pem \
   --etcd-cafile=./certs/ca.pem \
   --iface=eth0 \
   --subnet-file=./subnet.env \
   --healthz-port=2401
-' > /opt/flanneld/flanneld.sh
+' > /opt/flannel/flanneld.sh
 
-chmod +x /opt/flanneld/flanneld.sh
+chmod +x /opt/flannel/flanneld.sh
 
 etcdctl set /coreos.com/network/config '{"Network": "172.7.0.0/16", "Backend": {"Type": "host-gw"}}'
 
+etcdctl get /coreos.com/network/config
 
-
-echo '[program:flanneld-'${back-ip}']
+echo '[program:flanneld-'${back_ip}']
 command=/opt/flannel/flanneld.sh                             ; the program (relative uses PATH, can take args)
 numprocs=1                                                   ; number of processes copies to start (def 1)
 directory=/opt/flannel                                       ; directory to cwd to before exec (def no cwd)
@@ -70,13 +71,18 @@ stdout_events_enabled=false                                  ; emit events on st
 ' > /etc/supervisord.d/flannel.ini
 
 mkdir -p /data/logs/flanneld
+supervisorctl update
 
-iptablesRule="iptables -t nat -D POSTROUTING -s 172.$backip.0/24 ! -o docker0 -j MASQUERADE"
-echo ${iptablesRule}|awk '{run=$0;system(run)}'
+#sleep 5
+#
+#iptablesRule="iptables -t nat -D POSTROUTING -s 172.$backip.0/24 ! -o docker0 -j MASQUERADE"
+#echo ${iptablesRule}|awk '{run=$0;system(run)}'
+#
+#iptablesRule="iptables -t nat -I POSTROUTING -s 172.$backip.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
+#echo ${iptablesRule}|awk '{run=$0;system(run)}'
+#
+#iptables-save |grep -i postrouting
+#
+#iptables-save > /etc/sysconfig/iptables
 
-iptablesRule="iptables -t nat -I POSTROUTING -s 172.$backip.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
-echo ${iptablesRule}|awk '{run=$0;system(run)}'
 
-iptables-save |grep -i postrouting
-
-iptables-save > /etc/sysconfig/iptables

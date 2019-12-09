@@ -1,6 +1,5 @@
 #!/bin/bash
-hostname=$HOSTNAME
-
+cd /opt/kubernetes/server/bin/conf
 kubectl config set-cluster myk8s \
   --certificate-authority=/opt/kubernetes/server/bin/certs/ca.pem \
   --embed-certs=true \
@@ -53,9 +52,9 @@ localip=${localIP%/*}
 
 backip=$(echo $localip|awk -F. '{ print $3"."$4 }')
 
-back-ip=${backip//./-}
+back_ip=${backip//./-}
 
-echo '[program:kube-proxy-'${back-ip}']
+echo '[program:kube-proxy-'${back_ip}']
 command=/opt/kubernetes/server/bin/kube-proxy.sh                     ; the program (relative uses PATH, can take args)
 numprocs=1                                                           ; number of processes copies to start (def 1)
 directory=/opt/kubernetes/server/bin                                 ; directory to cwd to before exec (def no cwd)
