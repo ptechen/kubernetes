@@ -1,4 +1,4 @@
-# yum install epel-release
+yum install epel-release
 
 # yum install wget net-tools telnet tree nmap sysstat lrzsz dos2unix bind-utils -y
 

@@ -25,7 +25,7 @@ echo '#!/bin/sh
        --quota-backend-bytes 8000000000 \
        --initial-advertise-peer-urls https://'${localip}':2380 \
        --advertise-client-urls https://'${localip}':2379,http://127.0.0.1:2379 \
-       --initial-cluster  etcd-server-7-126=https://10.4.7.126:2380,etcd-server-7-127=https://10.4.7.127:2380,etcd-server-7-128=https://10.4.7.128:2380 \
+       --initial-cluster  etcd-server-7-12=https://10.4.7.12:2380,etcd-server-7-21=https://10.4.7.21:2380,etcd-server-7-22=https://10.4.7.22:2380 \
        --ca-file ./certs/ca.pem \
        --cert-file ./certs/etcd-peer.pem \
        --key-file ./certs/etcd-peer-key.pem \
