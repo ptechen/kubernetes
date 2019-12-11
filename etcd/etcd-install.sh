@@ -1,5 +1,7 @@
 #!/bin/bash
 
+yum install epel-release -y
+
 tar xf etcd-v3.1.20-linux-amd64.tar.gz -C /opt
 
 ln -s /opt/etcd-v3.1.20-linux-amd64 /opt/etcd
