@@ -9,14 +9,12 @@
 tar xf harbor-offline-installer-v1.8.5.tgz -C /opt
 mv /opt/harbor /opt/harbor-v1.8.5
 ln -s /opt/harbor-v1.8.5 /opt/harbor
-
+yum install epel-release -y
 mkdir -p /data/harbor/logs
 
-yum install -y python3
-
-pip3 install docker-compose
-
-yum install docker-compose -y
+#yum install -y python3
+#
+#pip3 install docker-compose
 
 #sh /opt/harbor/install.sh
 
@@ -34,3 +32,11 @@ echo 'server {
 systemctl start nginx
 
 systemctl enable nginx
+
+#docker pull docker.io/library/nginx:1.7.9
+
+#docker tag 84581e99d807 harbor.od.com/public/nginx:v1.7.9
+
+#docker login harbor.od.com
+
+#docker push harbor.od.com/public/nginx:v1.7.9

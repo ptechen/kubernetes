@@ -1,4 +1,5 @@
 #!/bin/bash
+etcd_cluster=https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379
 yum install -y iptables-services
 
 systemctl start iptables
@@ -35,7 +36,7 @@ FLANNEL_IPMASQ=false
 echo '#!/bin/sh
 ./flanneld \
   --public-ip='${localip}' \
-  --etcd-endpoints=https://10.4.7.126:2379,https://10.4.7.127:2379,https://10.4.7.128:2379 \
+  --etcd-endpoints='${etcd_cluster}' \
   --etcd-keyfile=./certs/client-key.pem \
   --etcd-certfile=./certs/client.pem \
   --etcd-cafile=./certs/ca.pem \

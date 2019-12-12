@@ -11,7 +11,7 @@ cd /opt/kubernetes/server/bin/conf
 kubectl config set-cluster myk8s \
   --certificate-authority=/opt/kubernetes/server/bin/certs/ca.pem \
   --embed-certs=true \
-  --server=https://10.4.7.125:7443 \
+  --server=https://10.4.7.10:7443 \
   --kubeconfig=kubelet.kubeconfig
 
 kubectl config set-credentials k8s-node \
