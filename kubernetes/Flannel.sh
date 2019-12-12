@@ -1,5 +1,6 @@
 #!/bin/bash
-etcd_cluster=https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379
+etcd_cluster='https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379'
+
 yum install -y iptables-services
 
 systemctl start iptables
