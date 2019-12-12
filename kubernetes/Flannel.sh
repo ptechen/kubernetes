@@ -1,11 +1,11 @@
 #!/bin/bash
 etcd_cluster='https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379'
 
-yum install -y iptables-services
+# yum install -y iptables-services
 
-systemctl start iptables
+# systemctl start iptables
 
-systemctl enable iptables
+# systemctl enable iptables
 
 mkdir -p /opt/flannel-v1.11.0
 
