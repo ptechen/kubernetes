@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 #docker pull kubernetes/pause
 #docker tag f9d5de079539 harbor.od.com/public/pause:latest
 #docker push harbor.od.com/public/pause:latest
