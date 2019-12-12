@@ -98,7 +98,7 @@ echo '#!/bin/bash
   --etcd-cafile ./certs/ca.pem \
   --etcd-certfile ./certs/client.pem \
   --etcd-keyfile ./certs/client-key.pem \
-  --etcd-servers https://10.4.7.126:2379,https://10.4.7.127:2379,https://10.4.7.128:2379 \
+  --etcd-servers https://10.4.7.11:2379,https://10.4.7.21:2379,https://10.4.7.22:2379 \
   --service-account-key-file ./certs/ca-key.pem \
   --service-cluster-ip-range 192.168.0.0/16 \
   --service-node-port-range 3000-29999 \
