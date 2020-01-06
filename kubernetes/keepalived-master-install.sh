@@ -94,3 +94,5 @@ systemctl enable nginx
 systemctl start keepalived
 
 systemctl enable keepalived
+
+# curl -Lv https://dashboard.od.com

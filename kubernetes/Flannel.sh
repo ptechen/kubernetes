@@ -1,12 +1,6 @@
 #!/bin/bash
 etcd_cluster='https://10.4.7.12:2379,https://10.4.7.21:2379,https://10.4.7.22:2379'
 
-# yum install -y iptables-services
-
-# systemctl start iptables
-
-# systemctl enable iptables
-
 mkdir -p /opt/flannel-v1.11.0
 
 tar xf flannel-v0.11.0-linux-amd64.tar.gz -C /opt/flannel-v1.11.0/
@@ -75,16 +69,26 @@ stdout_events_enabled=false                                  ; emit events on st
 mkdir -p /data/logs/flanneld
 supervisorctl update
 
+yum install -y iptables-services
+
+systemctl start iptables
+
+systemctl enable iptables
+
 #sleep 5
 #
-#iptablesRule="iptables -t nat -D POSTROUTING -s 172.$backip.0/24 ! -o docker0 -j MASQUERADE"
-#echo ${iptablesRule}|awk '{run=$0;system(run)}'
+iptablesRule="iptables -t nat -D POSTROUTING -s 172.${backip}.0/24 ! -o docker0 -j MASQUERADE"
+echo ${iptablesRule}|awk '{run=$0;system(run)}'
 #
-#iptablesRule="iptables -t nat -I POSTROUTING -s 172.$backip.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
-#echo ${iptablesRule}|awk '{run=$0;system(run)}'
+iptablesRule="iptables -t nat -I POSTROUTING -s 172.${backip}.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
+echo ${iptablesRule}|awk '{run=$0;system(run)}'
 #
+iptables -t filter -D INPUT -j REJECT --reject-with icmp-host-prohibited
+iptables -t filter -D FORWARD -j REJECT --reject-with icmp-host-prohibited
 #iptables-save |grep -i postrouting
-#
-#iptables-save > /etc/sysconfig/iptables
+#iptables-save |grep -i reject
+iptables-save > /etc/sysconfig/iptables
 
-
+# route -n
+#route add -net 172.7.21.0/24 gw 10.4.7.21 dev eth0
+#route add -net 172.7.22.0/24 gw 10.4.7.22 dev eth0
