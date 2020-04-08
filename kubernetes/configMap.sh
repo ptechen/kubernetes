@@ -84,3 +84,10 @@ spec:
   revisionHistoryLimit: 7
   progressDeadlineSeconds: 600
 ' > /data/k8s-yaml/dubbo-monitor/dp.yaml
+
+kubectl apply -f http://k8s-yaml.od.com/dubbo-monitor/cm.yaml
+kubectl apply -f http://k8s-yaml.od.com/dubbo-monitor/dp.yaml
+
+#iptables-save |grep -i postrouting
+#iptables -t nat -D POSTROUTING -s 172.7.22.0/24 ! -o docker0 -j MASQUERADE
+#iptables -t nat -I POSTROUTING -s 172.7.22.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE

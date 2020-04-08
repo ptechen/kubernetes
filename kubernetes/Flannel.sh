@@ -64,6 +64,8 @@ stdout_logfile_maxbytes=64MB                                 ; max # logfile byt
 stdout_logfile_backups=4                                     ; # of stdout logfile backups (default 10)
 stdout_capture_maxbytes=1MB                                  ; number of bytes in 'capturemode' (default 0)
 stdout_events_enabled=false                                  ; emit events on stdout writes (default false)
+killagroup=true
+stopasgroup=true
 ' > /etc/supervisord.d/flannel.ini
 
 mkdir -p /data/logs/flanneld
@@ -77,10 +79,10 @@ systemctl enable iptables
 
 #sleep 5
 #
-iptablesRule="iptables -t nat -D POSTROUTING -s 172.${backip}.0/24 ! -o docker0 -j MASQUERADE"
+iptablesRule="iptables -t nat -D POSTROUTING -s 172.3.222.0/24 ! -o docker0 -j MASQUERADE"
 echo ${iptablesRule}|awk '{run=$0;system(run)}'
 #
-iptablesRule="iptables -t nat -I POSTROUTING -s 172.${backip}.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
+iptablesRule="iptables -t nat -I POSTROUTING -s 172.3.222.0/24 ! -d 172.7.0.0/16 ! -o docker0 -j MASQUERADE"
 echo ${iptablesRule}|awk '{run=$0;system(run)}'
 #
 iptables -t filter -D INPUT -j REJECT --reject-with icmp-host-prohibited
@@ -92,3 +94,5 @@ iptables-save > /etc/sysconfig/iptables
 # route -n
 #route add -net 172.7.21.0/24 gw 10.4.7.21 dev eth0
 #route add -net 172.7.22.0/24 gw 10.4.7.22 dev eth0
+#route add -net 172.3.221.0/24 gw 192.168.3.221 dev ens33
+#route add -net 172.3.222.0/24 gw 192.168.3.222 dev ens33
